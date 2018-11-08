@@ -28,7 +28,7 @@ SUCCESS_FILENAME = 'page_views.csv'
 FAILS_FILENAME = 'failed_views.log'
 
 # header
-field_names = ['url', 'page_views']
+field_names = ['url', 'visited_pages', 'total_views']
 
 if not os.path.isfile(SUCCESS_FILENAME):
    print_header = True
@@ -57,11 +57,18 @@ def extract_page_views(base_url, page=1):
    page_views = html.find_all(class_="insights-list-item-pageviews")
 
    total_views = 0
+   total_visited_pages = 0
    for views in page_views:
       value = str(views.string) # retrieve python unicode string
       value = value.strip() # remove whitespaces
       value = value.replace(',','') # remove english thousands separators (,)
-      total_views += int(value) # accumulated sum for page views
+      value = int(value)
+      if value > 0:
+         total_visited_pages += 1
+      total_views += value # accumulated sum for page views
+
+   #~ print(total_visited_pages)
+   #~ print(total_views)
 
    # Now, in case we are scrapping this wiki for the first time,
    # we have to check whether there are more result pages to scrap for this wiki or not
@@ -76,7 +83,9 @@ def extract_page_views(base_url, page=1):
             #~ print(page_i)
             try:
                #~ print(total_views)
-               total_views += extract_page_views(base_url, page_i)
+               (views_part_i, pages_part_i) = extract_page_views(base_url, page_i)
+               total_views += views_part_i
+               total_visited_pages += pages_part_i
             except Exception as e:
                print(e)
                return False
@@ -86,7 +95,7 @@ def extract_page_views(base_url, page=1):
    # or if we are in the end of execution of page 1.
    # In all these cases, we return total_views
    #~ print(total_views)
-   return total_views
+   return (total_views, total_visited_pages)
 
 
 def main():
@@ -118,13 +127,14 @@ def main():
          if not (re.search('^http', url)):
             url = 'http://' + url
          print("Retrieving data for: " + url)
-         page_views = extract_page_views(url)
-         if not page_views:
+         (total_views, total_visited_pages) = extract_page_views(url)
+         if not total_views:
             print( "! Error trying to get page views for: {}.\n -> Saved in {}".format(url, FAILS_FILENAME) )
             print(url, file=failed_fd)
             continue;
-         print("This is the number of page views for wiki {}: {}".format(url, page_views))
-         csv_writer.writerow({'url': url, 'page_views': page_views})
+         print("This is the number of page visited for wiki {}: {}".format(url, total_visited_pages))
+         print("This is the number of visits for wiki {}: {}".format(url, total_views))
+         csv_writer.writerow({'url': url, 'visited_pages': total_visited_pages, 'total_views': total_views})
          print("<" + "="*50 + ">")
    else:
       print("Error: Invalid number of arguments. Please specify one or more wiki urls to get the page views from.", file=sys.stderr)
