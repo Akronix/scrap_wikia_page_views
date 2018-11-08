@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 import requests
 
 # global vars
-urlexample = 'http://gardening.wikia.com/wiki/Special:Insights/popularpages?sort=pv28'
+#~ urlexample = 'http://gardening.wikia.com/wiki/Special:Insights/popularpages?sort=pv28'
 endpoint = '/wiki/Special:Insights/popularpages?sort=pv28'
 
 # output files:
@@ -91,20 +91,36 @@ def extract_page_views(base_url, page=1):
 
 def main():
    help = """This script gives you page views in the last 4 weeks for a given set of wikis.\n
-            Syntax: python3 extra_page_views url1 [url2, url3,...]""";
+            Syntax (from std input): python3 -m extra_page_views url1 [url2, url3,...]
+            Syntax (from external file): python3 -m extra_page_views --file filename""";
 
    if(len(sys.argv)) >= 2:
-      if sys.argv[0] == 'help':
+      print(sys.argv)
+
+      if sys.argv[1] == '--help':
          print(help);
          exit(0)
 
-      for url in sys.argv[1:]:
+
+      if sys.argv[1] == '--file':
+         if (len(sys.argv) < 3):
+            print("Error: Invalid number of arguments. Please specify a file to get the wiki urls from.", file=sys.stderr)
+            print(help);
+            exit(1)
+         else:
+            with open(sys.argv[2]) as urls_file:
+               urls = urls_file.readlines()
+      else:
+         urls = sys.argv[1:]
+
+      for url in urls:
+         url = url.strip()
          if not (re.search('^http', url)):
             url = 'http://' + url
          print("Retrieving data for: " + url)
          page_views = extract_page_views(url)
          if not page_views:
-            print( "Error trying to get page views for: {}.\n Saved in {}".format(url, FAILS_FILENAME) )
+            print( "! Error trying to get page views for: {}.\n -> Saved in {}".format(url, FAILS_FILENAME) )
             print(url, file=failed_fd)
             continue;
          print("This is the number of page views for wiki {}: {}".format(url, page_views))
