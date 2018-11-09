@@ -15,6 +15,7 @@ import re
 import sys
 import csv
 import os.path
+import time
 
 from bs4 import BeautifulSoup
 import requests
@@ -22,6 +23,7 @@ import requests
 # global vars
 #~ urlexample = 'http://gardening.wikia.com/wiki/Special:Insights/popularpages?sort=pv28'
 endpoint = 'wiki/Special:Insights/popularpages?sort=pv28'
+response_delay = 0; # time spacing between requests in order to not saturate the web server
 
 # output files:
 SUCCESS_FILENAME = 'page_views-partk.csv'
@@ -59,11 +61,17 @@ def extract_page_views(base_url, page=1):
 
       return True
 
+   global response_delay;
+   print(response_delay)
+   time.sleep(5 * response_delay); # space requests to not saturate server
 
    if base_url[-1] != '/':
       base_url += '/'
    url = base_url + endpoint + '&page={}'.format(page)
-   req = requests.get(url)
+
+   t0 = time.time()
+   req = requests.get(url) # do the actual HTTP Request
+   response_delay = time.time() - t0  # elapsed time to get a response
 
    check_request(req)
 
