@@ -18,13 +18,14 @@ import os.path
 
 from bs4 import BeautifulSoup
 import requests
+from requests.exceptions import RequestException
 
 # global vars
 #~ urlexample = 'http://gardening.wikia.com/wiki/Special:Insights/popularpages?sort=pv28'
-endpoint = '/wiki/Special:Insights/popularpages?sort=pv28'
+endpoint = 'wiki/Special:Insights/popularpages?sort=pv28'
 
 # output files:
-SUCCESS_FILENAME = 'page_views.csv'
+SUCCESS_FILENAME = 'page_views-part1.csv'
 FAILS_FILENAME = 'failed_views.log'
 
 # header
@@ -42,16 +43,17 @@ csv_writer = csv.DictWriter(output_csv, fieldnames=field_names)
 if print_header:
    csv_writer.writeheader()
 
-failed_fd =open(FAILS_FILENAME, mode='a')
+failed_fd = open(FAILS_FILENAME, mode='a')
 
 def extract_page_views(base_url, page=1):
-
+   if base_url[-1] != '/':
+      base_url += '/'
    url = base_url + endpoint + '&page={}'.format(page)
-   req = requests.get(url)
+   req = requests.get(url, allow_redirects=False)
 
    if req.status_code != 200:
-      print(req.status_code)
-      Response.raise_for_status()
+      req.raise_for_status()
+      raise RequestException(req.status_code) # if it wasn't triggered before, maybe because of a HTTP redirection
 
    html = BeautifulSoup(req.text, features="html.parser")
    page_views = html.find_all(class_="insights-list-item-pageviews")
@@ -81,14 +83,10 @@ def extract_page_views(base_url, page=1):
          pages_no = int(wikia_paginator.findAll(class_="paginator-page")[-1].string); # before last <li> has the last page in its <a> child.
          for page_i in range(2,pages_no+1):
             #~ print(page_i)
-            try:
-               #~ print(total_views)
-               (views_part_i, pages_part_i) = extract_page_views(base_url, page_i)
-               total_views += views_part_i
-               total_visited_pages += pages_part_i
-            except Exception as e:
-               print(e)
-               return False
+            #~ print(total_views)
+            (views_part_i, pages_part_i) = extract_page_views(base_url, page_i)
+            total_views += views_part_i
+            total_visited_pages += pages_part_i
 
    # if we aren't in page 1
    # or if there isn't paginator (it means that it's a wiki with one page of page views only).
@@ -126,12 +124,16 @@ def main():
          url = url.strip()
          if not (re.search('^http', url)):
             url = 'http://' + url
+
          print("Retrieving data for: " + url)
-         (total_views, total_visited_pages) = extract_page_views(url)
-         if not total_views:
+         try:
+            (total_views, total_visited_pages) = extract_page_views(url)
+         except Exception as e:
             print( "! Error trying to get page views for: {}.\n -> Saved in {}".format(url, FAILS_FILENAME) )
+            print(e)
             print(url, file=failed_fd)
             continue;
+
          print("This is the number of page visited for wiki {}: {}".format(url, total_visited_pages))
          print("This is the number of visits for wiki {}: {}".format(url, total_views))
          csv_writer.writerow({'url': url, 'visited_pages': total_visited_pages, 'total_views': total_views})
