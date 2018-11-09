@@ -18,14 +18,13 @@ import os.path
 
 from bs4 import BeautifulSoup
 import requests
-from requests.exceptions import RequestException
 
 # global vars
 #~ urlexample = 'http://gardening.wikia.com/wiki/Special:Insights/popularpages?sort=pv28'
 endpoint = 'wiki/Special:Insights/popularpages?sort=pv28'
 
 # output files:
-SUCCESS_FILENAME = 'page_views-part1.csv'
+SUCCESS_FILENAME = 'page_views-partk.csv'
 FAILS_FILENAME = 'failed_views.log'
 
 # header
@@ -46,14 +45,27 @@ if print_header:
 failed_fd = open(FAILS_FILENAME, mode='a')
 
 def extract_page_views(base_url, page=1):
+
+   def check_request(req):
+      if re.search("community\.wikia\.com\/wiki\/Community_Central:Not_a_valid_community",
+       req.url):
+         raise Exception("Closed wiki") # Wiki has been closed
+
+      if re.search("community\.wikia\.com\/wiki\/Special\:CloseWiki", req.url):
+         raise Exception("Deleted wiki") # Wiki has been closed
+
+      if req.status_code != 200:
+         req.raise_for_status()
+
+      return True
+
+
    if base_url[-1] != '/':
       base_url += '/'
    url = base_url + endpoint + '&page={}'.format(page)
-   req = requests.get(url, allow_redirects=False)
+   req = requests.get(url)
 
-   if req.status_code != 200:
-      req.raise_for_status()
-      raise RequestException(req.status_code) # if it wasn't triggered before, maybe because of a HTTP redirection
+   check_request(req)
 
    html = BeautifulSoup(req.text, features="html.parser")
    page_views = html.find_all(class_="insights-list-item-pageviews")
@@ -126,10 +138,11 @@ def main():
             url = 'http://' + url
 
          print("Retrieving data for: " + url)
+         #~ (total_views, total_visited_pages) = extract_page_views(url)
          try:
             (total_views, total_visited_pages) = extract_page_views(url)
          except Exception as e:
-            print( "! Error trying to get page views for: {}.\n -> Saved in {}".format(url, FAILS_FILENAME) )
+            print( "! Error trying to get page views for: {}. -> Saved in {}".format(url, FAILS_FILENAME) )
             print(e)
             print(url, file=failed_fd)
             continue;
