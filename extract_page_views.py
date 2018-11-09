@@ -62,7 +62,7 @@ def extract_page_views(base_url, page=1):
       return True
 
    global response_delay;
-   print(response_delay)
+   print("Delay until next request: {} seg".format(5 * response_delay) )
    time.sleep(5 * response_delay); # space requests to not saturate server
 
    if base_url[-1] != '/':
