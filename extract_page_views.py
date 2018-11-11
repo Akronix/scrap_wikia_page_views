@@ -159,6 +159,9 @@ def main():
          print("This is the number of visits for wiki {}: {}".format(url, total_views))
          csv_writer.writerow({'url': url, 'visited_pages': total_visited_pages, 'total_views': total_views})
          print("<" + "="*50 + ">")
+
+      print("--->I'm done with all the urls!<---")
+
    else:
       print("Error: Invalid number of arguments. Please specify one or more wiki urls to get the page views from.", file=sys.stderr)
       print(help)
