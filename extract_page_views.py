@@ -24,6 +24,7 @@ import requests
 #~ urlexample = 'http://gardening.wikia.com/wiki/Special:Insights/popularpages?sort=pv28'
 endpoint = 'wiki/Special:Insights/popularpages?sort=pv28'
 response_delay = 0; # time spacing between requests in order to not saturate the web server
+DELAY_FACTOR = 5; # factor to multiply to the response_delay to wait between requests.
 
 # output files:
 SUCCESS_FILENAME = 'page_views-partk.csv'
@@ -62,8 +63,8 @@ def extract_page_views(base_url, page=1):
       return True
 
    global response_delay;
-   print("Delay until next request: {} seg".format(5 * response_delay) )
-   time.sleep(5 * response_delay); # space requests to not saturate server
+   print("Delay until next request: {} seg".format(DELAY_FACTOR * response_delay) )
+   time.sleep(DELAY_FACTOR * response_delay); # space requests to not saturate server
 
    if base_url[-1] != '/':
       base_url += '/'
